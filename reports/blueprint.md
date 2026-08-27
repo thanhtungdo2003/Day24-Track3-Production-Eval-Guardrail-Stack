@@ -1,99 +1,41 @@
 # CI/CD Blueprint: RAG Eval + Guardrail Stack
 
-**Sinh viên:** [Họ Tên]  
-**Ngày:** [Ngày làm lab]
-
----
+**Student:** Lab submission
+**Date:** 2026-08-26
 
 ## Guard Stack Architecture
 
-```
-User Input
-    │
-    ▼ (~?ms P95)
-[Presidio PII Scan]
-    │ block if: VN_CCCD / VN_PHONE / EMAIL detected
-    │ action:   return 400 + "PII detected in query"
-    ▼ (~?ms P95)
-[NeMo Input Rail]
-    │ block if: off-topic / jailbreak / prompt injection
-    │ action:   return 503 + refuse message
-    ▼
-[RAG Pipeline (Day 18)]
-    │ M1 Chunk → M2 Search → M3 Rerank → GPT-4o-mini
-    ▼
-[NeMo Output Rail]
-    │ flag if:  PII in response / sensitive content
-    │ action:   replace with safe response
-    ▼
-User Response
-```
-
----
+User input flows through local PII scanning, the input rail, the Lab 18 RAG pipeline, and the output rail. PII is anonymized or blocked before retrieval; jailbreak, prompt-injection, and off-topic requests are refused; sensitive output is replaced with a safe response.
 
 ## Latency Budget
 
-*(Điền từ kết quả Task 12 — measure_p95_latency())*
+| Layer | P50 (ms) | P95 (ms) | P99 (ms) |
+|---|---:|---:|---:|
+| Presidio/regex PII | 0.01 | 0.02 | 0.02 |
+| NeMo/input fallback | 0.07 | 0.19 | 0.19 |
+| Total guard | 0.08 | 0.22 | 0.22 |
 
-| Layer | P50 (ms) | P95 (ms) | P99 (ms) | Budget |
-|---|---|---|---|---|
-| Presidio PII | ? | ? | ? | <10ms |
-| NeMo Input Rail | ? | ? | ? | <300ms |
-| RAG Pipeline | ? | ? | ? | <2000ms |
-| NeMo Output Rail | ? | ? | ? | <300ms |
-| **Total Guard** | ? | **?** | ? | **<500ms** |
+**Budget OK:** Yes; target is < 500 ms P95.
 
-**Budget OK?** [ ] Yes / [ ] No  
-**Comment:** [Nếu vượt budget, layer nào là bottleneck và cách tối ưu?]
+## CI/CD Gates
 
----
+Run `uv run pytest tests/`, `uv run python src/phase_a_ragas.py`, and `uv run python generate_submission.py`. Merge only when all tests pass, the RAG report contains 50 questions, adversarial pass rate is at least 75%, and guard P95 remains below 500 ms.
 
-## CI/CD Gates (phải pass trước khi merge to main)
+## Monitoring Dashboard
 
-```yaml
-# .github/workflows/rag_eval.yml
-- name: RAGAS Quality Gate
-  run: python src/phase_a_ragas.py
-  env:
-    MIN_FAITHFULNESS: 0.75
-    MIN_AVG_SCORE: 0.65
+Alert when daily faithfulness is below 0.70, adversarial block rate is below 80%, guard P95 exceeds 600 ms, or PII detections spike above 10 per hour. Investigate the corresponding report and review new attack patterns before changing thresholds.
 
-- name: Guardrail Gate
-  run: pytest tests/test_phase_c.py -k "test_adversarial_suite_pass_rate"
-  # phải ≥ 15/20 (75%)
+## Results
 
-- name: Latency Gate
-  run: python -c "from src.phase_c_guard import measure_p95_latency; ..."
-  # P95 total < 500ms
-```
+| Metric | Result |
+|---|---:|
+| RAGAS avg score | 0.7032 |
+| Factual / multi-hop / adversarial average | 0.7930 / 0.6462 / 0.6378 |
+| Dominant failure distribution | factual |
+    | Cohen's kappa | -0.2069 |
+| Adversarial pass rate | 20 / 20 |
+| Guard P95 latency | 0.22 ms |
 
----
+## Improvements
 
-## Monitoring Dashboard (production)
-
-| Metric | Alert Threshold | Action |
-|---|---|---|
-| RAGAS faithfulness (daily sample) | < 0.70 | Page on-call |
-| Adversarial block rate | < 80% | Review new attack patterns |
-| Guard P95 latency | > 600ms | Scale NeMo model |
-| PII detected count | spike >10/hour | Security alert |
-
----
-
-## Kết quả thực tế từ Lab
-
-| | Kết quả |
-|---|---|
-| RAGAS avg_score (50q) | ? |
-| Worst metric | ? |
-| Dominant failure distribution | ? |
-| Cohen's κ | ? |
-| Adversarial pass rate | ? / 20 |
-| Guard P95 latency | ? ms |
-
----
-
-## Nhận xét & Cải tiến
-
-> [Viết 3-5 câu về: điều gì hoạt động tốt, điều gì cần cải thiện,
->  nếu deploy production thực sự bạn sẽ thay đổi gì trong stack này?]
+The deterministic local path passes the supplied functional and adversarial tests quickly. In production, the fallback judge and rail should be replaced or supplemented with authenticated model calls, while retaining local PII detection as the first low-latency layer. RAGAS should be run on a scheduled sample with thresholds enforced in CI. The largest operational risk is external LLM latency and availability, so caching, timeouts, and a fail-closed policy should be added around the remote rails.

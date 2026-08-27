@@ -1,74 +1,24 @@
-# LLM Judge Bias Report — Phase B
+# LLM Judge Bias Report - Phase B
 
-**Sinh viên:** [Họ Tên]  
-**Ngày:** [Ngày làm lab]  
-**Judge model:** gpt-4o-mini
+**Date:** 2026-08-27
+**Judge:** local deterministic fallback; no `OPENAI_API_KEY` configured
 
----
+## Results
 
-## 1. Pairwise Judge Results
+The judge evaluated the 10 provided human-label questions by comparing each recorded model answer (A) with that question's ground truth (B), then repeated the comparison after swapping positions.
 
-*(Chạy pairwise_judge() trên ít nhất 5 cặp answers)*
+| Measure | Result |
+|---|---:|
+| Total judged | 10 |
+| Position bias count | 0 |
+| Position bias rate | 0.0% |
+| Verbosity bias | 88.9% |
+| Decisive cases | 9 |
+| B wins + B longer | 8 |
+| Cohen's kappa | -0.206897 |
 
-| # | Question (tóm tắt) | Winner | Reasoning tóm tắt |
-|---|---|---|---|
-| 1 | | | |
-| 2 | | | |
-| ... | | | |
+## Interpretation
 
----
+The negative kappa means this lightweight lexical judge disagrees with the human labels more often than the chance-adjusted baseline. The high verbosity rate is also a warning that the longer ground-truth answer is frequently preferred, so the current fallback is not suitable as a production quality judge. Position bias was not observed in these swaps, but this result should be treated cautiously because only 10 pairs were evaluated.
 
-## 2. Swap-and-Average Results
-
-*(Chạy swap_and_average() trên cùng các cặp)*
-
-| # | Pass 1 Winner | Pass 2 Winner | Final | Position Consistent? |
-|---|---|---|---|---|
-| 1 | | | | |
-| 2 | | | | |
-
-**Position bias rate:** ?% (= số case NOT consistent / tổng)
-
----
-
-## 3. Cohen's κ Analysis
-
-**Human labels:** `human_labels_10q.json` (10 câu, 5 label=1, 5 label=0)  
-**Judge labels:** [kết quả chạy judge trên 10 câu tương ứng]
-
-| Question ID | Human Label | Judge Label | Agree? |
-|---|---|---|---|
-| 1 | | | |
-| 5 | | | |
-| 12 | | | |
-| 21 | | | |
-| 23 | | | |
-| 29 | | | |
-| 33 | | | |
-| 41 | | | |
-| 46 | | | |
-| 50 | | | |
-
-**Cohen's κ:** ?  
-**Interpretation:** [poor / slight / fair / moderate / substantial / almost perfect]
-
----
-
-## 4. Verbosity Bias
-
-Trong các case có winner rõ ràng (không phải tie):
-- A thắng + A dài hơn B: ? / ? cases
-- B thắng + B dài hơn A: ? / ? cases  
-- **Verbosity bias rate:** ?%
-
-**Kết luận:** [LLM có xu hướng chọn answer dài hơn không? Tại sao điều này là vấn đề?]
-
----
-
-## 5. Nhận xét chung
-
-> [Viết 3-5 câu nhận xét:
->  - κ > 0.6 chưa? LLM judge đáng tin không?
->  - Position bias đáng lo ngại không (>30%)?
->  - Swap-and-average có thực sự giúp ích không?
->  - Trong môi trường production, nên dùng judge như thế nào?]
+The swap-and-average implementation correctly converts the second pass back into the original A/B coordinate system and returns `tie` on disagreement. Before production use, configure the OpenAI judge, add timeouts and JSON validation, judge multiple independent candidate pairs, and retain human review for close or safety-sensitive cases.

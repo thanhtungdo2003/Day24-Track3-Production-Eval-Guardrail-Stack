@@ -8,6 +8,19 @@ load_dotenv()
 # --- API Keys ---
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 HF_TOKEN = os.getenv("HF_TOKEN", "")  # Optional: for HuggingFace models
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
+NVIDIA_BASE_URL = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
+NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3.5-lightning-30b-a3b")
+NVIDIA_TIMEOUT_SECONDS = float(os.getenv("NVIDIA_TIMEOUT_SECONDS", "30"))
+NVIDIA_LIVE_JUDGE = os.getenv("NVIDIA_LIVE_JUDGE", "false").lower() == "true"
+
+
+def get_llm_client():
+    if not NVIDIA_API_KEY:
+        return None
+    from openai import OpenAI
+    return OpenAI(base_url=NVIDIA_BASE_URL, api_key=NVIDIA_API_KEY,
+                  timeout=NVIDIA_TIMEOUT_SECONDS, max_retries=0)
 
 # --- Qdrant (same as Day 18) ---
 QDRANT_HOST = "localhost"

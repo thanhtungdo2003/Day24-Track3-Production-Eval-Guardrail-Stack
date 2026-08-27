@@ -1,0 +1,16 @@
+[project]
+name = "lab24-production-eval-guardrail-stack"
+version = "0.1.0"
+description = "Production RAG evaluation and guardrail lab"
+requires-python = ">=3.11"
+dependencies = [
+    "openai>=3.3.1",
+    "python-dotenv>=1.0",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+

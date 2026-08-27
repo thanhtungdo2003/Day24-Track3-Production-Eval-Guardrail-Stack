@@ -1,10 +1,29 @@
 .env
+.env.*
+!.env.example
+
+# Python and test caches
 __pycache__/
 *.pyc
 .python-version
 *.egg-info/
 .venv/
 venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local agent/session output
+.ai-log/
+
+# Build and editor artefacts
+build/
+dist/
+*.log
+.DS_Store
+
+# Generated lab data and reports; check_lab uses them locally.
 answers_50q.json
-reports/*.json
 !reports/.gitkeep
